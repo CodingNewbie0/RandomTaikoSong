@@ -256,6 +256,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Logics\MyButtonEventHandler.cs" />
     <Compile Include="Logics\TaikoSongCrolling.cs" />
     <Compile Include="TrailerWindow.xaml.cs">
       <DependentUpon>TrailerWindow.xaml</DependentUpon>

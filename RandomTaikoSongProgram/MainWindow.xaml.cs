@@ -32,15 +32,14 @@ namespace RandomTaikoSongProgram
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
+        private Dictionary<Button, (Brush background, object content)> buttonStates;
+
         bool isFavorite = false; // false -> openApi 검색해온결과, true -> 즐겨찾기 보기
         public MainWindow()
         {
             InitializeComponent();
-        }
 
-        private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            TxtYouTubeName.Focus(); // 텍스트박스에 포커스 셋
+            buttonStates = new Dictionary<Button, (Brush background, object content)>();
         }
 
         // 세부 설정 버튼
@@ -49,12 +48,77 @@ namespace RandomTaikoSongProgram
 
         }
 
-        // 랜덤 추첨
-        private void BtnRandomSong_Click(object sender, RoutedEventArgs e) 
+    // 랜덤 추첨
+    private void BtnRandomSong_Click(object sender, RoutedEventArgs e) 
         {
 
         }
 
+        // 검색버튼, OpenAPI 노래 검색 (완료)
+        private async void BtnSearchYouTube_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrEmpty(TxtYouTubeName.Text))
+            {
+                await Commons.ShowMessageAsync("검색", "검색할 노래명을 입력하세요.");
+                return;
+            }
+
+            try
+            {
+                SearchYouTube(TxtYouTubeName.Text);
+            }
+            catch (Exception ex)
+            {
+                await Commons.ShowMessageAsync("오류", $"오류 발생 : {ex.Message}");
+            }
+        }
+
+        // 엔터로 검색창 넘어가게 이벤트 넣기
+        private void TxtYouTubeName_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                BtnSearchYouTube_Click(sender, e);
+            }
+        }
+
+        // 실제 검색메서드
+        private async void SearchYouTube(string SongName)
+        {
+            string encoding_songName = HttpUtility.UrlEncode(SongName, Encoding.UTF8); // 노래 검색 URL
+            string result = string.Empty; // 결과값
+
+            // result를 json으로 변경
+            var jsonResult = JObject.Parse(result); // string -> json
+
+            var total = Convert.ToInt32(jsonResult["total_results"]); // 전체 검색결과 수
+                                                                      //await Commons.ShowMessageAsync("검색결과", total.ToString());
+            var items = jsonResult["results"];
+            // items를 데이터그리드에 표시
+            var json_array = items as JArray;
+
+            var songItems = new List<YSI>(); // json에서 넘어온 배열을 담을 장소
+            foreach (var val in json_array)
+            {
+                var songItem = new YSI()
+                {
+                    Title = Convert.ToString(val["title"]),
+                    Composer = Convert.ToString(val["composer"]),
+                    Difficulty = Convert.ToString(val["difficulty"]),
+                    Genre = Convert.ToString(val["genre"]),
+                    Release = Convert.ToDateTime(val["Release"])
+                };
+                songItems.Add(songItem);
+            }
+
+            this.DataContext = songItems;
+            isFavorite = false; // 즐겨찾기가 아님.
+            StsResult.Content = $"OpenAPI 조회 {songItems.Count} 건 조회 완료";
+        }
+        private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            TxtYouTubeName.Focus(); // 텍스트박스에 포커스 셋
+        }
         // 찾은거 유튜브로 보기 (완료)
         private async void BtnWatchTrailer_Click(object sender, RoutedEventArgs e) 
         {
@@ -80,109 +144,32 @@ namespace RandomTaikoSongProgram
                 var song = GrdResult.SelectedItem as YoutubeSongItem;
                 songName = song.Title;
             }
-            //await Commons.ShowMessageAsync("유튜브", $"노래 검색 {songName}");
+
             var trailerWindow = new TrailerWindow(songName)
             {
                 Owner = this, // TrailerWindow의 부모는 MainWindow
                 WindowStartupLocation = WindowStartupLocation.CenterOwner // 부모창의 정중앙에 위치
             };
-            //trailerWindow.Show(); // 모달리스로 창을 열면 부모차을 손댈 수 있음
             trailerWindow.ShowDialog(); // 모달창
 
         }
 
-        // 검색버튼, OpenAPI 노래 검색 (완료)
-        private async void BtnSearchYouTube_Click(object sender, RoutedEventArgs e)
-        {
-            if (string.IsNullOrEmpty(TxtYouTubeName.Text))
-            {
-                await Commons.ShowMessageAsync("검색", "검색할 노래명을 입력하세요.");
-                return;
-            }
-
-            //if (TxtYouTubeName.Text.Length <= 2)
-            //{
-            //    await Commons.ShowMessageAsync("검색", "검색어를 2자이상 입력하세요.");
-            //    return;
-            //}
-
-            try
-            {
-                SearchYouTube(TxtYouTubeName.Text);
-            }
-            catch (Exception ex)
-            {
-                await Commons.ShowMessageAsync("오류", $"오류 발생 : {ex.Message}");
-            }
-        }
-
-        // 실제 검색메서드
-        private async void SearchYouTube(string SongName)
-        {
-            string tmdb_apiKey = "2afb7029a3cbdcaf0f965bf5f7e5c97a";
-            string encoding_movieName = HttpUtility.UrlEncode(SongName, Encoding.UTF8);
-            string openApiUri = $"https://api.themoviedb.org/3/search/movie?api_key={tmdb_apiKey}" +
-                                $"&language=ko-KR&page=1&include_adult=false&query={encoding_movieName}"; // 노래 검색 URL
-            string result = string.Empty; // 결과값
-
-            // api 실행할 객체
-            WebRequest req = null;
-            WebResponse res = null;
-            StreamReader reader = null;
-                        
-            // result를 json으로 변경
-            var jsonResult = JObject.Parse(result); // string -> json
-
-            var total = Convert.ToInt32(jsonResult["total_results"]); // 전체 검색결과 수
-            //await Commons.ShowMessageAsync("검색결과", total.ToString());
-            var items = jsonResult["results"];
-            // items를 데이터그리드에 표시
-            var json_array = items as JArray;
-
-            var songItems = new List<YSI>(); // json에서 넘어온 배열을 담을 장소
-            foreach (var val in json_array)
-            {
-                var songItem = new YSI()
-                {
-                    Title = Convert.ToString(val["title"]),
-                    Composer = Convert.ToString(val["composer"]),
-                    Difficulty = Convert.ToString(val["difficulty"]),
-                    Genre = Convert.ToString(val["genre"]),
-                    Youtube = Convert.ToString(val["youtube"])
-                };
-                songItems.Add(songItem);
-            }
-
-            this.DataContext = songItems;
-            isFavorite = false; // 즐겨찾기가 아님.
-            StsResult.Content = $"OpenAPI 조회 {songItems.Count} 건 조회 완료";
-        }
-
-        // 엔터로 검색창 넘어가게 이벤트 넣기
-        private void TxtYouTubeName_KeyDown(object sender, KeyEventArgs e) 
-        {
-            if (e.Key == Key.Enter)
-            {
-                BtnSearchYouTube_Click(sender, e);
-            }
-        }
-
-        // ----------------------- 즐겨찾기 목록 이벤트 핸들러 -------------------------
+        #region <즐겨찾기 목록 이벤트 핸들러>
 
         private async void BtnAddFavorite_Click(object sender, RoutedEventArgs e) // 즐겨찾기 추가
         {
             List<YoutubeSongItem> list = new List<YoutubeSongItem>();
-            if (GrdResult.SelectedItems.Count == 0)
-            {
-                await Commons.ShowMessageAsync("오류", "즐겨찾기에 추가할 노래를 선택하세요(복수선택 가능)");
-                return;
-            }
+            //if (GrdResult.SelectedItems.Count == 0)
+            //{
+            //    await Commons.ShowMessageAsync("오류", "즐겨찾기에 추가할 노래를 선택하세요(복수선택 가능)");
+            //    return;
+            //}
 
-            if (isFavorite)
-            {
-                await Commons.ShowMessageAsync("오류", "이미 즐겨찾기한 노래입니다.");
-                return;
-            }
+            //if (isFavorite)
+            //{
+            //    await Commons.ShowMessageAsync("오류", "이미 즐겨찾기한 노래입니다.");
+            //    return;
+            //}
 
             #region < MySQL 연결 >
             try
@@ -192,35 +179,22 @@ namespace RandomTaikoSongProgram
                 {
                     if (conn.State == ConnectionState.Closed) conn.Open();
 
-                    var query = @"INSERT INTO YoutubeSongItem
-                                               ( Title
-                                               , Composer
-                                               , Difficulty
-                                               , Genre
-                                               , Youtube
-                                               , Release )
-                                         VALUES
-                                               ( @Title
-                                               , @Composer
-                                               , @Difficulty
-                                               , @Genre
-                                               , @Youtube
-                                               , @Release ) ";
+                    var query = @"INSERT INTO songs (title, composer, difficulty, genre, release) VALUES (@title, @composer, @difficulty, @genre, @release);";
 
-                    var insRes = 0;
+
+                    var insRes = 0;                    
                     foreach (YoutubeSongItem item in list)
                     {
                         MySqlCommand cmd = new MySqlCommand(query, conn);
-                        cmd.Parameters.AddWithValue("@Title", item.Title);
-                        cmd.Parameters.AddWithValue("@Original_Title", item.Composer);
-                        cmd.Parameters.AddWithValue("@Release_Date", item.Difficulty);
-                        cmd.Parameters.AddWithValue("@Original_Language", item.Genre);
-                        cmd.Parameters.AddWithValue("@Adult", item.Youtube);
-                        cmd.Parameters.AddWithValue("@Reg_Date", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@title", item.Title);
+                        cmd.Parameters.AddWithValue("@composer", item.Composer);
+                        cmd.Parameters.AddWithValue("@difficulty", item.Difficulty);
+                        cmd.Parameters.AddWithValue("@genre", item.Genre);
+                        cmd.Parameters.AddWithValue("@release", item.Release);
 
                         insRes += cmd.ExecuteNonQuery();
                     }
-
+                    
                     if (list.Count == insRes)
                     {
                         await Commons.ShowMessageAsync("저장", "DB저장성공");
@@ -252,45 +226,31 @@ namespace RandomTaikoSongProgram
                 {
                     if (conn.State == ConnectionState.Closed) conn.Open();
 
-                    var query = @"SELECT Title
-                              , Composer
-                              , Difficulty
-                              , Genre
-                              , Youtube
-                              , Release 
-                           FROM YoutubeSongItem
-                           ORDER BY Title ASC";
+                    var query = @"SELECT * FROM songs;";
 
-                    // 쿼리 실행
+                    var insRes = 0;
                     MySqlCommand cmd = new MySqlCommand(query, conn);
-                    using (MySqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            // 결과에서 필요한 정보를 추출하여 YoutubeSongItem 객체를 생성하고 list에 추가
-                            YoutubeSongItem item = new YoutubeSongItem
-                            {
-                                Title = reader["Title"].ToString(),
-                                Composer = reader["Composer"].ToString(),
-                                Difficulty = reader["Difficulty"].ToString(),
-                                Genre = reader["Genre"].ToString(),
-                                Youtube = reader["Youtube"].ToString(),
-                                Release = Convert.ToDateTime(reader["Release"])
-                            };
+                    cmd = new MySqlCommand(query, conn);
+                    var reader = cmd.ExecuteReader();
 
-                            list.Add(item);
-                        }
+                    foreach (YoutubeSongItem item in list)
+                    {
+                        cmd.Parameters.AddWithValue("@Id", item.Id);
+                        cmd.Parameters.AddWithValue("@Title", item.Title);
+                        cmd.Parameters.AddWithValue("@Composer", item.Composer);
+                        cmd.Parameters.AddWithValue("@Difficulty", item.Difficulty);
+                        cmd.Parameters.AddWithValue("@Genre", item.Genre);
+                        cmd.Parameters.AddWithValue("@Release", DateTime.Now);
                     }
 
-                    // list에 저장된 즐겨찾기 목록을 활용하여 필요한 작업 수행
-                    // 예: 데이터 바인딩, UI에 출력 등
-
-                    await Commons.ShowMessageAsync("조회", "DB 조회 성공");
+                    this.DataContext = list;
+                    isFavorite = true;
+                    StsResult.Content = $"즐겨찾기 {list.Count} 건 조회완료";
                 }
             }
             catch (Exception ex)
             {
-                await Commons.ShowMessageAsync("오류", $"DB 조회 오류: {ex.Message}");
+                await Commons.ShowMessageAsync("오류", $"DB조회 오류\n{ex.Message}");
             }
             #endregion
         }
@@ -311,9 +271,9 @@ namespace RandomTaikoSongProgram
             }
 
             #region < MySQL 연결 >
-            try // 삭제
+            try 
             {
-                using (MySqlConnection conn = new MySqlConnection(Commons.connString))
+                using (MySqlConnection conn = new MySqlConnection(Commons.myConnString))
                 {
                     if (conn.State == ConnectionState.Closed) conn.Open();
 
@@ -348,72 +308,144 @@ namespace RandomTaikoSongProgram
 
             BtnViewFavorite_Click(sender, e); // 즐겨찾기 보기 이벤트핸들러를 한번 실행
         }
+#endregion
 
         // ----------------------- 왕관 체크 이벤트 핸들러 -------------------------       
 
-        // ----------------------- 미클리어 이벤트 핸들러 -------------------------      
-        private void BtnNoCrownCheak_Click(object sender, RoutedEventArgs e) // 버튼이 클릭되었을 때의 동작
+        #region <미클리어 이벤트 핸들러>
+        private void BtnNoCrownCheak_MouseLeave(object sender, MouseEventArgs e) // 마우스가 버튼을 떠날 때의 동작
         {
-            BtnNoCrownCheak.Content = "완료!";
+            // 버튼의 배경색을 원래대로 복구
+            BtnNoCrownCheak.Background = Brushes.Brown;
+            Button button = (Button)sender;
+
+            // 원래 배경색과 컨텐츠로 복원합니다.
+            if (buttonStates.TryGetValue(button, out var state))
+            {
+                button.Content = state.content;
+                button.Background = state.background;
+            }
         }
 
         private void BtnNoCrownCheak_MouseEnter(object sender, MouseEventArgs e) // 마우스가 버튼에 들어갔을 때의 동작
         {
+            Button button = (Button)sender;
+            // 원래 배경색과 컨텐츠를 저장합니다.
+            if (!buttonStates.ContainsKey(button))
+                buttonStates.Add(button, (button.Background, button.Content));
+
             // 버튼의 배경색을 연한 갈색(브라운)으로 변경.
             BtnNoCrownCheak.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
             BtnNoCrownCheak.Background = Brushes.Tan;
         }
+        private async void BtnNoCrownCheak_Click(object sender, RoutedEventArgs e) // 버튼이 클릭되었을 때의 동작
+        {
+            if (GrdResult.SelectedItems.Count == 0)
+            {
+                await Commons.ShowMessageAsync("선택오류", "노래를 선택하세요.");
+                return;
+            }
 
-        private void BtnNoCrownCheak_MouseLeave(object sender, MouseEventArgs e) // 마우스가 버튼을 떠날 때의 동작
-        {            
-            // 버튼의 배경색을 원래대로 복구
-            BtnNoCrownCheak.Background = Brushes.Brown;
+            BtnNoCrownCheak.Content = "완료!";
         }
 
-        // ----------------------- 클리어 이벤트 핸들러 -------------------------      
-        private void BtnClearCrownCheak_Click(object sender, RoutedEventArgs e)
+        #endregion
+
+        #region <클리어 이벤트 핸들러>
+        private async void BtnClearCrownCheak_Click(object sender, RoutedEventArgs e)
         {
-            BtnNoCrownCheak.Content = "완료!";
+            if (GrdResult.SelectedItems.Count == 0)
+            {
+                await Commons.ShowMessageAsync("선택오류", "노래를 선택하세요.");
+                return;
+            }
+
+            BtnClearCrownCheak.Content = "완료!";
         }
 
         private void BtnClearCrownCheak_MouseEnter(object sender, MouseEventArgs e)
         {
+            Button button = (Button)sender;
+            // 원래 배경색과 컨텐츠를 저장합니다.
+            if (!buttonStates.ContainsKey(button))
+                buttonStates.Add(button, (button.Background, button.Content));
+
             // 버튼의 배경색을 연한 회색으로 변경.
-            BtnNoCrownCheak.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
-            BtnNoCrownCheak.Background = Brushes.LightGray;
+            BtnClearCrownCheak.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
+            BtnClearCrownCheak.Background = Brushes.LightGray;
         }
 
         private void BtnClearCrownCheak_MouseLeave(object sender, MouseEventArgs e)
         {
-            BtnNoCrownCheak.Background = Brushes.Gray;
-        }
+            BtnClearCrownCheak.Background = Brushes.Gray;
+            Button button = (Button)sender;
 
-        // ----------------------- 풀콤보 이벤트 핸들러 -------------------------
-        private void BtnFullComboCrownCheak_Click(object sender, RoutedEventArgs e)
+            // 원래 배경색과 컨텐츠로 복원합니다.
+            if (buttonStates.TryGetValue(button, out var state))
+            {
+                button.Content = state.content;
+                button.Background = state.background;
+            }
+        }
+        #endregion
+
+        #region <풀콤보 이벤트 핸들러>
+        private async void BtnFullComboCrownCheak_Click(object sender, RoutedEventArgs e)
         {
-            BtnNoCrownCheak.Content = "완료!";
+            if (GrdResult.SelectedItems.Count == 0)
+            {
+                await Commons.ShowMessageAsync("선택오류", "노래를 선택하세요.");
+                return;
+            }
+
+            BtnFullComboCrownCheak.Content = "완료!";
         }
 
         private void BtnFullComboCrownCheak_MouseEnter(object sender, MouseEventArgs e)
         {
-            // 버튼의 배경색을 연한 노랑으로 변경.
-            BtnNoCrownCheak.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
-            BtnNoCrownCheak.Background = Brushes.LightGoldenrodYellow;
+            Button button = (Button)sender;
+            // 원래 배경색과 컨텐츠를 저장합니다.
+            if (!buttonStates.ContainsKey(button))
+                buttonStates.Add(button, (button.Background, button.Content));
+
+            // 버튼의 배경색을 빛나는 노란색으로 변경하고, 컨텐츠를 아이콘으로 설정합니다.
+            button.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
+            button.Background = Brushes.LightGoldenrodYellow;
         }
 
         private void BtnFullComboCrownCheak_MouseLeave(object sender, MouseEventArgs e)
         {
-            BtnNoCrownCheak.Background = Brushes.Gold;
-        }
+            BtnFullComboCrownCheak.Background = Brushes.Gold;
+            Button button = (Button)sender;
 
-        // ----------------------- 퍼펙트 이벤트 핸들러 -------------------------
-        private void BtnAllPerpectCrownCheak_Click(object sender, RoutedEventArgs e)
+            // 원래 배경색과 컨텐츠로 복원합니다.
+            if (buttonStates.TryGetValue(button, out var state))
+            {
+                button.Content = state.content;
+                button.Background = state.background;
+            }
+        }
+        #endregion
+
+        #region <퍼펙트 이벤트 핸들러>
+        private async void BtnAllPerpectCrownCheak_Click(object sender, RoutedEventArgs e)
         {
-            BtnNoCrownCheak.Content = "완료!";
+            if (GrdResult.SelectedItems.Count == 0)
+            {
+                await Commons.ShowMessageAsync("선택오류", "노래를 선택하세요.");
+                return;
+            }
+
+            BtnAllPerpectCrownCheak.Content = "완료!";
         }
 
         private void BtnAllPerpectCrownCheak_MouseEnter(object sender, MouseEventArgs e)
         {
+            Button button = (Button)sender;
+            // 원래 배경색과 컨텐츠를 저장합니다.
+            if (!buttonStates.ContainsKey(button))
+                buttonStates.Add(button, (button.Background, button.Content));
+
             // 무지개 색상으로 배경 그라데이션 정의
             LinearGradientBrush rainbowBrush = new LinearGradientBrush
             {
@@ -431,8 +463,8 @@ namespace RandomTaikoSongProgram
             rainbowBrush.GradientStops.Add(new GradientStop(Colors.Violet, 1));
 
             // 버튼의 배경에 무지개 색상 적용
-            BtnNoCrownCheak.Background = rainbowBrush;
-            BtnNoCrownCheak.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
+            BtnAllPerpectCrownCheak.Background = rainbowBrush;
+            BtnAllPerpectCrownCheak.Content = new PackIconJamIcons { Kind = PackIconJamIconsKind.Crown, Margin = new Thickness(5) };
         }
 
         private void BtnAllPerpectCrownCheak_MouseLeave(object sender, MouseEventArgs e)
@@ -453,7 +485,16 @@ namespace RandomTaikoSongProgram
             rainbowBrush.GradientStops.Add(new GradientStop(Colors.Plum, 1));
 
             // 버튼의 배경에 무지개 색상 적용
-            BtnNoCrownCheak.Background = rainbowBrush;
+            BtnAllPerpectCrownCheak.Background = rainbowBrush;
+            Button button = (Button)sender;
+
+            // 원래 배경색과 컨텐츠로 복원합니다.
+            if (buttonStates.TryGetValue(button, out var state))
+            {
+                button.Content = state.content;
+                button.Background = state.background;
+            }
         }
+        #endregion
     }
 }

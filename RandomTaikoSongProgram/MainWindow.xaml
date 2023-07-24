@@ -60,7 +60,7 @@
                 </Style>
             </DataGrid.Resources>
             <DataGrid.Columns>
-                <DataGridTextColumn Binding="{Binding Genre}" Header=" 장르 ">
+                <DataGridTextColumn Binding="{Binding Id}" Header=" 노래번호 ">
                     <DataGridTextColumn.ElementStyle>
                         <Style>
                             <Setter Property="TextBlock.TextAlignment" Value="Center"/>
@@ -75,7 +75,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
                 <DataGridTextColumn Binding="{Binding Composer}" Header=" 작곡가 "/>
-                <DataGridTemplateColumn Header="성적 기록">
+                <DataGridTemplateColumn Header="난이도별 성적 기록">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
@@ -87,6 +87,7 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
+                <DataGridTextColumn Binding="{Binding Genre}" Header=" 장르 "/>
                 <DataGridTextColumn Binding="{Binding Release}" Header=" 업데이트시간 ">
                     <DataGridTextColumn.ElementStyle>
                         <Style>
@@ -94,7 +95,6 @@
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
-                <DataGridTextColumn Binding="{Binding Youtube}" Header=" 유튜브링크 "/>
             </DataGrid.Columns>
         </DataGrid>
 
