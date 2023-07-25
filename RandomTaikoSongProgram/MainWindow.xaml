@@ -52,50 +52,14 @@
 
         <DataGrid Grid.Row="1" Grid.RowSpan="1" Grid.Column="0" x:Name="GrdResult" Margin="5,5,5,5" 
                   IsReadOnly="True" Style="{StaticResource MahApps.Styles.DataGrid.Azure}" 
-                  ItemsSource="{Binding}" AutoGenerateColumns="False" Grid.ColumnSpan="3">
+                  ItemsSource="{Binding}"  Grid.ColumnSpan="3">
             <DataGrid.Resources>
                 <!-- 헤더 스타일 정의 -->
                 <Style TargetType="DataGridColumnHeader">
                     <Setter Property="HorizontalContentAlignment" Value="Center" />
                 </Style>
             </DataGrid.Resources>
-            <DataGrid.Columns>
-                <DataGridTextColumn Binding="{Binding Id}" Header=" 노래번호 ">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style>
-                            <Setter Property="TextBlock.TextAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Binding="{Binding Title}" Header=" 노래제목 " FontWeight="Bold">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style>
-                            <Setter Property="TextBlock.TextAlignment" Value="Right"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Binding="{Binding Composer}" Header=" 작곡가 "/>
-                <DataGridTemplateColumn Header="난이도별 성적 기록">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <Image Source="{Binding NoCrown}" Width="50" Height="50" />
-                                <Image Source="{Binding ClearCrown}" Width="50" Height="50" />
-                                <Image Source="{Binding FullComboCrown}" Width="50" Height="50" />
-                                <Image Source="{Binding AllPerpectCrown}" Width="50" Height="50" />
-                            </StackPanel>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Binding="{Binding Genre}" Header=" 장르 "/>
-                <DataGridTextColumn Binding="{Binding Release}" Header=" 업데이트시간 ">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style>
-                            <Setter Property="TextBlock.TextAlignment" Value="Right"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-            </DataGrid.Columns>
+            <!--dd-->
         </DataGrid>
 
         <Grid Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" Grid.RowSpan="3">
