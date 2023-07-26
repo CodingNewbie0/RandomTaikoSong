@@ -20,6 +20,8 @@ using HtmlAgilityPack;
 using ControlzEx.Standard;
 using Org.BouncyCastle.Utilities;
 using System.Windows.Data;
+using System.Linq;
+using System.Security.Policy;
 
 namespace RandomTaikoSongProgram
 {
@@ -28,7 +30,7 @@ namespace RandomTaikoSongProgram
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        private Dictionary<Button, (Brush background, object content)> buttonStates;
+        private readonly Dictionary<Button, (Brush background, object content)> buttonStates;
 
         public class MyData
         {
@@ -40,7 +42,6 @@ namespace RandomTaikoSongProgram
             public string Oni { get; set; }
             public string Ura { get; set; }
             public string Genre { get; set; }
-            public string ReleaseDate { get; set; }
 
         }
 
@@ -51,7 +52,7 @@ namespace RandomTaikoSongProgram
             buttonStates = new Dictionary<Button, (Brush background, object content)>();
         }
 
-        // 세부 설정 버튼
+        #region  < 세부 설정 버튼 >
         private void BtnOffset_Click(object sender, RoutedEventArgs e) 
         {
             try
@@ -85,7 +86,6 @@ namespace RandomTaikoSongProgram
 
                 // DataTable 사용하여 데이터 처리
                 // 예시로 콘솔에 모든 데이터를 출력합니다.
-                                             
 
                 foreach (DataRow row in dataTable.Rows)
                 {
@@ -102,6 +102,7 @@ namespace RandomTaikoSongProgram
                 MessageBox.Show("오류가 발생했습니다: " + ex.Message);
             }
         }
+        #endregion
 
         // 랜덤 추첨
         private void BtnRandomSong_Click(object sender, RoutedEventArgs e) 
@@ -159,28 +160,40 @@ namespace RandomTaikoSongProgram
                 {
                     Title = Convert.ToString(val["title"]),
                     Composer = Convert.ToString(val["composer"]),
-                    Difficulty = Convert.ToString(val["difficulty"]),
-                    Genre = Convert.ToString(val["genre"]),
-                    Release = Convert.ToDateTime(val["Release"])
+                    Easy = Convert.ToString(val["easy"]),
+                    Normal = Convert.ToString(val["normal"]),
+                    Hard = Convert.ToString(val["hard"]),
+                    Oni = Convert.ToString(val["oni"]),
+                    Ura = Convert.ToString(val["ura"]),
+                    Genre = Convert.ToString(val["genre"])
                 };
                 songItems.Add(songItem);
             }
 
             this.DataContext = songItems;
             isFavorite = false; // 즐겨찾기가 아님.
-            StsResult.Content = $"OpenAPI 조회 {songItems.Count} 건 조회 완료";
+            StsResult.Content = $"노래 조회 {songItems.Count} 건 조회 완료";
         }
         private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
         {
             string connectionString = "server=210.119.12.53;user=root;database=taiko;password=12345;";
             TxtYouTubeName.Focus(); // 텍스트박스에 포커스 셋
-            RunCrowling(connectionString);
+            RunCrawling(connectionString);
         }
 
-
-        public void RunCrowling(string connectionString)
+        private void Title_Click(object sender, SelectionChangedEventArgs e)
         {
-            // 크롤링할 링크 목록
+            //if (GridResult.SelectedItem != null)
+            //{
+            //    // 선택한 항목에서 원하는 정보를 가져와서 TxtYouTubeName TextBox에 표시
+            //    MyData selectedData = (MyData)GridResult.SelectedItem;
+            //    TxtYouTubeName.Text = selectedData.Title; // 여기서 Title 대신 다른 정보를 사용하면 됩니다.
+            //}
+        }
+
+        public void RunCrawling(string connectionString)
+        {
+            #region < 크롤링할 링크 목록 >
             string[] links = {
             "pops",
             "kids",
@@ -192,24 +205,31 @@ namespace RandomTaikoSongProgram
             "namco"
             };
             SongCrawlingAsync();
+            #endregion
 
+            GrdResult.Columns[0].Width = new DataGridLength(350);
+            GrdResult.Columns[1].Width = new DataGridLength(400);
+            GrdResult.RowHeight = 10; // 데이터 그리드 높이 값은 원하는 값으로 변경 가능
             // 노래 정보를 크롤링
             void SongCrawlingAsync()
             {
-                // 리스트에 배열 저장
-                List<Dictionary<string, object>> taikoInfoList = new List<Dictionary<string, object>>();
+                #region < 리스트 >
+                _ = new List<Dictionary<string, object>>();
                 List<string> titles = new List<string>();
                 List<string> artists = new List<string>();
-                //List<List<string>> difficultyLists = new List<List<string>>();
-                List<string> difficultyLists = new List<string>();
-                string[] stringArray;
+                List<string> easyLists = new List<string>();
+                List<string> normalLists = new List<string>();
+                List<string> hardLists = new List<string>();
+                List<string> oniLists = new List<string>();
+                List<string> uraLists = new List<string>();
                 List<string> genres = new List<string>();
+                #endregion
 
-                int linkNum = 0;
                 // 데이터를 담을 List 생성
                 List<MyData> dataList = new List<MyData>();
+
                 foreach (string link in links)
-                {                                     
+                {
                     // 미리 선언한 내용을 링크와 결합
                     string url = $"https://taiko.namco-ch.net/taiko/songlist/{link}.php";
 
@@ -233,158 +253,309 @@ namespace RandomTaikoSongProgram
 
                     if (tableNodes != null)
                     {
-                        // 곡명 가져오기 (완성)
-                        int count = 0;
+                        #region < 곡명, 작곡가명 가져오기 (완성) > 
                         foreach (HtmlNode songNode in tableNodes)
                         {
+                            int count = 0;
                             HtmlNodeCollection titleCells = songNode.SelectNodes(".//th");
+                            HtmlNodeCollection artistCells = songNode.SelectNodes(".//th//p");
+                            HtmlNodeCollection imgNodes = songNode.SelectNodes("//img");
                             if (titleCells != null)
                             {
                                 foreach (HtmlNode cellNode in titleCells)
                                 {
                                     var pTag = cellNode.SelectSingleNode(".//p");
+
+                                    if (count >= 8)
+                                    {
+                                        if(pTag == null)
+                                        { artists.Add(""); }
+                                        else
+                                        { artists.Add(pTag.InnerText); }
+                                    }
                                     pTag?.Remove();
                                     string title = cellNode.InnerText.Trim();
 
                                     // 0번째 부터 7번째 요소는 제외하고 추가
                                     if (count >= 8)
                                     {
-                                        titles.Add(title);
+                                        if (title == "") { }
+                                        else { titles.Add(title);}
+                                    }
+                                    count++;
+                                }
+                            }
+                            if (imgNodes != null)
+                            {
+                                int n = 0;
+                                foreach (HtmlNode imgNode in imgNodes)
+                                {
+                                    string genre = imgNode.GetAttributeValue("alt", "");
+                                    for (int i = 0; i < titles.Count; i++)
+                                    {
+                                        if (n >= 2)
+                                        {
+                                            genres.Add(genre);
+                                        }
+                                        if (n >= 10) break;
+                                    }
+                                    n++;
+                                }
+                            }
+                        }
+                        #endregion
+
+                        #region < 장르 가져오기 (완성) > 
+                        // <img> 태그들 선택
+                        //HtmlNodeCollection imgNodes = doc.DocumentNode.SelectNodes("//img");
+                        //if (imgNodes != null)
+                        //{
+                        //    int n = 0;
+                        //    foreach (HtmlNode imgNode in imgNodes)
+                        //    {
+                        //        string genre = imgNode.GetAttributeValue("alt", "");
+                        //        for (int i = 0; i < titles.Count; i++)
+                        //        {
+                        //            if (n >= 2)
+                        //            {
+                        //                genres.Add(genre);
+                        //            }
+                        //            if (n >= 10) break;
+                        //        }
+                        //        n++;
+                        //    }
+                        //}
+                        #endregion
+
+                        // 난이도 찾기 (쉬움 ~ 우라까지 하나씩 다 집어넣기) <진짜 찐 완성> 클린코딩 필요!!
+
+                        #region < 간단 (완료) >
+                        foreach (HtmlNode rowNode in tableNodes)
+                        {
+                            int[] easyTargetIndexes = new int[1500];
+                            int easyStartNumber = 1;
+                            int easyIncrement = 6;
+
+                            // 만약 links 배열 변수가 "namco"에 도달했다면 easyIncrement 값을 7로 변경
+                            if (link == "namco")
+                            {
+                                easyIncrement = 7;
+                            }
+
+                            for (int i = 0; i < easyTargetIndexes.Length; i++)
+                            {
+                                easyTargetIndexes[i] = easyStartNumber;
+                                easyStartNumber += easyIncrement;
+                            }
+
+                            int count = 0;
+                            List<int> repeatedIndexes = new List<int>(); // 반복된 인덱스를 저장하는 리스트
+                            HtmlNodeCollection easyCells = rowNode.SelectNodes(".//td");
+                            if (easyCells != null)
+                            {
+                                foreach (HtmlNode easyCellNode in easyCells)
+                                {
+                                    string easy = easyCellNode.InnerText.Trim();
+
+                                    // targetIndexes 배열에 있는 인덱스만 easyLists에 추가합니다.
+                                    if (easyTargetIndexes.Contains(count))
+                                    {
+                                        easyLists.Add(easy);
                                     }
                                     count++;
                                 }
                             }
                         }
+                        #endregion
 
-                        // 작곡가명
-                        foreach (HtmlNode artistNode in tableNodes)
-                        {
-                            HtmlNodeCollection artistCells = artistNode.SelectNodes(".//th//p");
-                            string artist = "";
-                            if (artistCells != null)
-                            {
-                                if (artistCells.Count > 1)
-                                {
-                                    artist = artistCells[0].InnerText.Trim();
-                                    foreach (HtmlNode cellNode in artistCells)
-                                    {
-                                        Console.Write(cellNode.InnerText + " ");
-                                    }
-                                }
-                            }
-                            artists.Add(artist);
-                        }
-
-                        // 난이도 찾기
+                        #region < 보통 (완료) >
                         foreach (HtmlNode rowNode in tableNodes)
                         {
-                            HtmlNodeCollection difficultyCells = rowNode.SelectNodes(".//td");
-                            var difficultyList = new List<string>();
+                            int[] normaltargetIndexes = new int[1500]; // 크기가 4인 배열 생성
+                            int normalstartNumber = 2;
+                            int normalincrement = 6;
 
-                            string data = "";
-                            int n = 0;
-
-                            if (difficultyCells != null)
+                            // 만약 links 배열 변수가 "namco"에 도달했다면 easyIncrement 값을 7로 변경
+                            if (link == "namco")
                             {
+                                normalincrement = 7;
+                            }
 
-                                foreach (HtmlNode cellNode in difficultyCells)
+                            // 배열에 숫자 채우기
+                            for (int i = 0; i < normaltargetIndexes.Length; i++)
+                            {
+                                normaltargetIndexes[i] = normalstartNumber;
+                                normalstartNumber += normalincrement;
+                            }
+
+                            int count = 0;
+                            List<int> repeatedIndexes = new List<int>(); // 반복된 인덱스를 저장하는 리스트
+                            HtmlNodeCollection normalCells = rowNode.SelectNodes(".//td");
+                            if (normalCells != null)
+                            {
+                                foreach (HtmlNode normalCellNode in normalCells)
                                 {
-                                    difficultyList.Add(cellNode.InnerText.Trim());
-                                    Console.Write(cellNode.InnerText + " ");
-                                    data += cellNode.InnerText;
-                                    n++;
-                                    if (n >= 5) { data += "///"; }
+                                    string normal = normalCellNode.InnerText.Trim();
+
+                                    if (normaltargetIndexes.Contains(count))
+                                    {
+                                        normalLists.Add(normal);
+                                    }
+                                    count++;
                                 }
-
-                                // 문자열 data를 "///" 기준으로 나누어서 difficultyLists 리스트에 추가
-                                difficultyLists.AddRange(data.Split(new string[] { "///" }, StringSplitOptions.None));
-
-                                Console.WriteLine("으아아앙ㄴ말ㄴ머리ㅏㄴ머리ㅏㄴ머리ㅏㄴㅁㅁ++++++++++++-----------");
                             }
-                            // 레벨별 난이도
-                            /*
-                            if (difficultyList.Count == 6)
+                        }
+                        #endregion
+
+                        #region < 어려움 (완료) >
+                        foreach (HtmlNode rowNode in tableNodes)
+                        {
+                            int[] hardtargetIndexes = new int[1500]; // 크기가 4인 배열 생성
+                            int hardstartNumber = 3;
+                            int hardincrement = 6;
+
+                            // 만약 links 배열 변수가 "namco"에 도달했다면 easyIncrement 값을 7로 변경
+                            if (link == "namco")
                             {
-                                string[] difficultyLevels = { "쉬움", "보통", "어려움", "오니", "우라" };
-                                difficultyList = new List<string>();
-                                for (int j = 1; j < 6; j++)
+                                hardincrement = 7;
+                            }
+
+                            // 배열에 숫자 채우기
+                            for (int i = 0; i < hardtargetIndexes.Length; i++)
+                            {
+                                hardtargetIndexes[i] = hardstartNumber;
+                                hardstartNumber += hardincrement;
+                            }
+
+                            int count = 0;
+                            List<int> repeatedIndexes = new List<int>(); // 반복된 인덱스를 저장하는 리스트
+                            HtmlNodeCollection hardCells = rowNode.SelectNodes(".//td");
+                            if (hardCells != null)
+                            {
+                                foreach (HtmlNode hardCellNode in hardCells)
                                 {
-                                    difficultyList.Add($"{difficultyLevels[j - 1]} : {difficultyList[j]}");
+                                    string hard = hardCellNode.InnerText.Trim();
+
+                                    if (hardtargetIndexes.Contains(count))
+                                    {
+                                        hardLists.Add(hard);
+                                    }
+                                    count++;
                                 }
                             }
-                            */
-                            //difficultyLists.Add(difficultyList);
                         }
+                        #endregion
 
-                        // 장르 찾기 (완성)
-                        // <img> 태그들 선택
-                        HtmlNodeCollection imgNodes = doc.DocumentNode.SelectNodes("//img");
-                        if (imgNodes != null)
+                        #region < 오니 (완료) >
+                        foreach (HtmlNode rowNode in tableNodes)
                         {
-                            int n = 0;
-                            foreach (HtmlNode imgNode in imgNodes)
+                            int[] onitargetIndexes = new int[1500]; // 크기가 4인 배열 생성
+                            int onistartNumber = 4;
+                            int oniincrement = 6;
+
+                            // 만약 links 배열 변수가 "namco"에 도달했다면 easyIncrement 값을 7로 변경
+                            if (link == "namco")
                             {
-                                // <img> 태그의 alt 속성 확인
-                                string genre = imgNode.GetAttributeValue("alt", "");
-                                if (n >= 2) genres.Add(genre);
-                                n++;
-                                if (n >= 10) break;
+                                oniincrement = 7;
+                            }
+
+                            // 배열에 숫자 채우기
+                            for (int i = 0; i < onitargetIndexes.Length; i++)
+                            {
+                                onitargetIndexes[i] = onistartNumber;
+                                onistartNumber += oniincrement;
+                            }
+
+                            int count = 0;
+                            List<int> repeatedIndexes = new List<int>(); // 반복된 인덱스를 저장하는 리스트
+                            HtmlNodeCollection oniCells = rowNode.SelectNodes(".//td");
+                            if (oniCells != null)
+                            {
+                                foreach (HtmlNode oniCellNode in oniCells)
+                                {
+                                    string oni = oniCellNode.InnerText.Trim();
+
+                                    if (onitargetIndexes.Contains(count))
+                                    {
+                                        oniLists.Add(oni);
+                                    }
+                                    count++;
+                                }
                             }
                         }
+                        #endregion
 
-
-                        // DataGrid에 데이터를 추가할 리스트 생성
-                        List<Dictionary<string, object>> dataGridItems = new List<Dictionary<string, object>>();
-
-
-
-
-                        for (int i = 0; i < titles.Count; i++)
+                        #region < 우라 (완료) >
+                        foreach (HtmlNode rowNode in tableNodes)
                         {
-                            // 데이터 생성과 추가
+                            int[] uratargetIndexes = new int[1500]; // 크기가 4인 배열 생성
+                            int urastartNumber = 5;
+                            int uraincrement = 6;
 
-                            Console.WriteLine(titles.Count);
-                            Console.WriteLine(difficultyLists.Count);
-                            MyData data1 = new MyData { Title = titles[i], Composer = "", Easy = "", Normal = "", Hard = "", Oni = "", Ura = difficultyLists[i], Genre = genres[linkNum], ReleaseDate = "" };
+                            // 만약 links 배열 변수가 "namco"에 도달했다면 easyIncrement 값을 7로 변경
+                            if (link == "namco")
+                            {
+                                uraincrement = 7;
+                            }
 
-                            dataList.Add(data1);
+                            // 배열에 숫자 채우기
+                            for (int i = 0; i < uratargetIndexes.Length; i++)
+                            {
+                                uratargetIndexes[i] = urastartNumber;
+                                urastartNumber += uraincrement;
+                            }
 
+                            int count = 0;
+                            List<int> repeatedIndexes = new List<int>(); // 반복된 인덱스를 저장하는 리스트
+                            HtmlNodeCollection uraCells = rowNode.SelectNodes(".//td");
+                            if (uraCells != null)
+                            {
+                                foreach (HtmlNode uraCellNode in uraCells)
+                                {
+                                    string ura = uraCellNode.InnerText.Trim();
+
+                                    // targetIndexes 배열에 있는 인덱스만 easyLists에 추가합니다.
+                                    if (uratargetIndexes.Contains(count))
+                                    {
+                                        uraLists.Add(ura);
+                                    }
+                                    count++;
+                                }
+                            }
                         }
-                        linkNum++;
+                        #endregion
 
-                        GrdResult.RowHeight = 10; // 높이 값은 원하는 값으로 변경 가능
-
-                        // 데이터 그리드에 데이터 설정
-
+                        #region < DataGrid에 데이터를 추가할 리스트 생성 >
+                        if (link == links.Last())
+                        { 
+                            for (int i = 0; i < titles.Count; i++)
+                            {
+                                MyData data = new MyData
+                                {
+                                    Title = titles[i],
+                                    Composer = artists[i],
+                                    Easy = easyLists[i],
+                                    Normal = normalLists[i],
+                                    Hard = hardLists[i],
+                                    Oni = oniLists[i],
+                                    Ura = uraLists[i],
+                                    Genre = genres[i]
+                                };
+                                dataList.Add(data);
+                            }
+                        }
+                        #endregion
                     }
-                }
-
-
-                GrdResult.ItemsSource = dataList;
-
-                for (int i = 0; i < titles.Count; i++)
-                {
-
-
-
-                    //GrdResult.Items.Add(new { Title1 = titles[i], Composer1 = artists[i], Difficulty1 = difficultyLists[i], Genre1 = genres[i] });
-                    // 노래정보를 리스트에 추가
-                    /*
-                    var taikoInfo = new Dictionary<string, object>
-                    {
-                        { "Title", titles[i] },
-                        { "Composer", artists[i] },
-                        { "Difficulty", difficultyLists[i] },
-                        { "Genre", genres[i] }
-                    };
-                    taikoInfoList.Add(taikoInfo);
-                    */
-                }
-                //GrdResult.ItemsSource = taikoInfoList;
+                    Console.WriteLine(titles.Count);
+                    Console.WriteLine("+++++++++++++++++++++++++");
+                    Console.WriteLine(genres.Count);
+                    Console.WriteLine("=========================");
+                }                
+                GrdResult.ItemsSource = dataList; // 데이터 그리드에 정보를 넣음
             }
         }
 
-        // 찾은거 유튜브로 보기 (완료)
+        #region < 찾은거 유튜브로 보기 (완료???) >
         private async void BtnWatchTrailer_Click(object sender, RoutedEventArgs e) 
         {
             if (GrdResult.SelectedItems.Count == 0)
@@ -418,23 +589,24 @@ namespace RandomTaikoSongProgram
             trailerWindow.ShowDialog(); // 모달창
 
         }
+        #endregion
 
-        #region <즐겨찾기 목록 이벤트 핸들러>
+        #region < 즐겨찾기 목록 이벤트 핸들러 (완료) >
 
         private async void BtnAddFavorite_Click(object sender, RoutedEventArgs e) // 즐겨찾기 추가
         {
             List<YoutubeSongItem> list = new List<YoutubeSongItem>();
-            //if (GrdResult.SelectedItems.Count == 0)
-            //{
-            //    await Commons.ShowMessageAsync("오류", "즐겨찾기에 추가할 노래를 선택하세요(복수선택 가능)");
-            //    return;
-            //}
+            if (GrdResult.SelectedItems.Count == 0)
+            {
+                await Commons.ShowMessageAsync("오류", "즐겨찾기에 추가할 노래를 선택하세요(복수선택 가능)");
+                return;
+            }
 
-            //if (isFavorite)
-            //{
-            //    await Commons.ShowMessageAsync("오류", "이미 즐겨찾기한 노래입니다.");
-            //    return;
-            //}
+            if (isFavorite)
+            {
+                await Commons.ShowMessageAsync("오류", "이미 즐겨찾기한 노래입니다.");
+                return;
+            }
 
             #region < MySQL 연결 >
             try
@@ -444,7 +616,7 @@ namespace RandomTaikoSongProgram
                 {
                     if (conn.State == ConnectionState.Closed) conn.Open();
 
-                    var query = @"INSERT INTO songs (title, composer, difficulty, genre, release) VALUES (@title, @composer, @difficulty, @genre, @release);";
+                    var query = @"INSERT INTO songs (title, composer, easy, genre, release) VALUES (@title, @composer, @easy, @genre, @release);";
 
 
                     var insRes = 0;                    
@@ -453,9 +625,12 @@ namespace RandomTaikoSongProgram
                         MySqlCommand cmd = new MySqlCommand(query, conn);
                         cmd.Parameters.AddWithValue("@title", item.Title);
                         cmd.Parameters.AddWithValue("@composer", item.Composer);
-                        cmd.Parameters.AddWithValue("@difficulty", item.Difficulty);
+                        cmd.Parameters.AddWithValue("@easy", item.Easy);
+                        cmd.Parameters.AddWithValue("@normal", item.Normal);
+                        cmd.Parameters.AddWithValue("@hard", item.Hard);
+                        cmd.Parameters.AddWithValue("@oni", item.Oni);
+                        cmd.Parameters.AddWithValue("@ura", item.Ura);
                         cmd.Parameters.AddWithValue("@genre", item.Genre);
-                        cmd.Parameters.AddWithValue("@release", item.Release);
 
                         insRes += cmd.ExecuteNonQuery();
                     }
@@ -473,9 +648,9 @@ namespace RandomTaikoSongProgram
             catch (Exception ex)
             {
                 await Commons.ShowMessageAsync("오류", $"DB저장 오류{ex.Message}");
-            }
-            #endregion
+            }            
         }
+        #endregion
 
         private async void BtnViewFavorite_Click(object sender, RoutedEventArgs e) // 즐겨찾기 목록
         {
@@ -503,9 +678,12 @@ namespace RandomTaikoSongProgram
                         cmd.Parameters.AddWithValue("@Id", item.Id);
                         cmd.Parameters.AddWithValue("@Title", item.Title);
                         cmd.Parameters.AddWithValue("@Composer", item.Composer);
-                        cmd.Parameters.AddWithValue("@Difficulty", item.Difficulty);
-                        cmd.Parameters.AddWithValue("@Genre", item.Genre);
-                        cmd.Parameters.AddWithValue("@Release", DateTime.Now);
+                        cmd.Parameters.AddWithValue("@easy", item.Easy);
+                        cmd.Parameters.AddWithValue("@normal", item.Normal);
+                        cmd.Parameters.AddWithValue("@hard", item.Hard);
+                        cmd.Parameters.AddWithValue("@oni", item.Oni);
+                        cmd.Parameters.AddWithValue("@ura", item.Ura);
+                        cmd.Parameters.AddWithValue("@genre", item.Genre);
                     }
 
                     this.DataContext = list;
@@ -573,7 +751,7 @@ namespace RandomTaikoSongProgram
 
             BtnViewFavorite_Click(sender, e); // 즐겨찾기 보기 이벤트핸들러를 한번 실행
         }
-#endregion
+        #endregion
 
         // ----------------------- 왕관 체크 이벤트 핸들러 -------------------------       
 
@@ -761,5 +939,6 @@ namespace RandomTaikoSongProgram
             }
         }
         #endregion
+                
     }
 }

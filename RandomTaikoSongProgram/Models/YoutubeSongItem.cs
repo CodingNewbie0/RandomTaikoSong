@@ -1,5 +1,4 @@
-﻿using System; // DB로 쓸거
-using System.Windows.Media;
+﻿using System.Windows.Media; // DB로 쓸거
 
 namespace RandomTaikoSongProgram.Models
 {
@@ -8,9 +7,12 @@ namespace RandomTaikoSongProgram.Models
         public int Id { get; set; }
         public string Title { get; set; } // 노래제목
         public string Composer { get; set; } // 작곡가
-        public string Difficulty { get; set; } // 난이도
+        public string Easy { get; set; } // 쉬움
+        public string Normal { get; set; } // 보통
+        public string Hard { get; set; } // 어려움
+        public string Oni { get; set; } // 오니
+        public string Ura { get; set; } // 우라
         public string Genre { get; set; } // 장르
-        public DateTime Release { get; set; } // 업데이트시간
         public ImageSource NoCrown { get; set; } // 왕관 이미지를 저장할 ImageSource 속성
         public ImageSource ClearCrown { get; set; }
         public ImageSource FullComboCrown { get; set; }

@@ -8,7 +8,7 @@
     xmlns:iconPacks="http://metro.mahapps.com/winfx/xaml/iconpacks"
     xmlns:local="clr-namespace:RandomTaikoSongProgram"
     mc:Ignorable="d"
-    Title="태고 랜덤 노래 추천프로그램 0.1ver" Height="500" Width="800" MaxHeight="500" MaxWidth="800" WindowStartupLocation="CenterScreen"
+    Title="태고 랜덤 노래 추천프로그램 0.1ver" Height="700" Width="1100" MaxHeight="700" MaxWidth="1100" WindowStartupLocation="CenterScreen"
     FontFamily="NanumGothic" Loaded="MetroWindow_Loaded" >
     <mah:MetroWindow.IconTemplate>
         <DataTemplate>
@@ -52,14 +52,13 @@
 
         <DataGrid Grid.Row="1" Grid.RowSpan="1" Grid.Column="0" x:Name="GrdResult" Margin="5,5,5,5" 
                   IsReadOnly="True" Style="{StaticResource MahApps.Styles.DataGrid.Azure}" 
-                  ItemsSource="{Binding}"  Grid.ColumnSpan="3">
+                  ItemsSource="{Binding}"  Grid.ColumnSpan="3" SelectionChanged="Title_Click">
             <DataGrid.Resources>
                 <!-- 헤더 스타일 정의 -->
                 <Style TargetType="DataGridColumnHeader">
                     <Setter Property="HorizontalContentAlignment" Value="Center" />
                 </Style>
             </DataGrid.Resources>
-            <!--dd-->
         </DataGrid>
 
         <Grid Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="0" Grid.RowSpan="3">
@@ -184,7 +183,7 @@
             </Button>
         </Grid>
 
-        <StatusBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="-2,130,-2,-2" Grid.RowSpan="2">
+        <StatusBar Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Margin="-2,230,-2,-2" Grid.RowSpan="2">
             <StatusBarItem Content="Taiko &amp; Random Song App" />
             <Separator Style="{StaticResource MahApps.Styles.Separator.StatusBar}" />
             <StatusBarItem x:Name="StsResult" />
