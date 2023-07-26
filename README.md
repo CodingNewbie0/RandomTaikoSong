@@ -34,3 +34,5 @@
 실시간 정보 크롤링 후 데이터 그리드로 구현( 장르명은 안맞아서 다시 코딩해야함 )
 
 <img src="https://raw.githubusercontent.com/codingnewbie0/RandomTaikoSong/main/images/RandamTaikoApp2.gif" width="700">
+
+(아이돌 신곡이라고 NEW! 표시 뜨는거 좀 웃김)
