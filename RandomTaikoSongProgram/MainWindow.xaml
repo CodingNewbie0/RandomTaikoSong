@@ -52,7 +52,7 @@
 
         <DataGrid Grid.Row="1" Grid.RowSpan="1" Grid.Column="0" x:Name="GrdResult" Margin="5,5,5,5" 
                   IsReadOnly="True" Style="{StaticResource MahApps.Styles.DataGrid.Azure}" 
-                  ItemsSource="{Binding RunCrawling}"  Grid.ColumnSpan="3" SelectionChanged="Title_Click">
+                  ItemsSource="{Binding}"  Grid.ColumnSpan="3" SelectionChanged="Title_Click">
             <DataGrid.Resources>
                 <!-- 헤더 스타일 정의 -->
                 <Style TargetType="DataGridColumnHeader">
@@ -61,7 +61,7 @@
 
                 <!-- 셀 스타일 정의 -->
                 <Style TargetType="DataGridCell">
-                    <Setter Property="HorizontalContentAlignment" Value="Center" />
+                    <Setter Property="HorizontalContentAlignment" Value="Center"/>
                 </Style>
             </DataGrid.Resources>
         </DataGrid>
