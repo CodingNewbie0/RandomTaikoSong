@@ -208,9 +208,9 @@ namespace RandomTaikoSongProgram
             SongCrawlingAsync();
             #endregion
 
-            GrdResult.Columns[0].Width = new DataGridLength(350);
-            GrdResult.Columns[1].Width = new DataGridLength(400);
-            GrdResult.RowHeight = 10; // 데이터 그리드 높이 값은 원하는 값으로 변경 가능
+            GrdResult.Columns[0].Width = new DataGridLength(400);
+            GrdResult.Columns[1].Width = new DataGridLength(450);
+            GrdResult.RowHeight = 15; // 데이터 그리드 높이 값은 원하는 값으로 변경 가능
             // 노래 정보를 크롤링
             void SongCrawlingAsync()
             {
@@ -271,6 +271,7 @@ namespace RandomTaikoSongProgram
                                 foreach (HtmlNode cellNode in titleCells)
                                 {
                                     var pTag = cellNode.SelectSingleNode(".//p"); // p태그는 작곡가 이름
+                                    var spanTag = cellNode.SelectSingleNode(".//span"); // span태그는 동메달, 캇메달 곡 목록
 
                                     if (count >= 8) // 작곡가명 추가
                                     {
@@ -280,6 +281,7 @@ namespace RandomTaikoSongProgram
                                         }
                                     }
                                     pTag?.Remove(); // 작곡가명 삭제 (안그러면 제목에 작곡가명까지 같이 들어감)
+                                    spanTag?.Remove(); // 메달 곡 목록 삭제
                                     string title = cellNode.InnerText.Trim();
 
                                     // 노래 제목 추가 (0번째 부터 7번째 요소는 제외하고 추가)
@@ -292,6 +294,7 @@ namespace RandomTaikoSongProgram
                                 }
                                 #endregion
 
+                                #region < 장르명 >
                                 switch (link)
                                 {
                                     case "pops":
@@ -343,6 +346,7 @@ namespace RandomTaikoSongProgram
                                         }
                                         break;
                                 }
+                                #endregion
                             }
                         }
                         #endregion
