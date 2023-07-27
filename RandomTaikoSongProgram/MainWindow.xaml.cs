@@ -204,6 +204,7 @@ namespace RandomTaikoSongProgram
             "classic",
             "namco"
             };
+
             SongCrawlingAsync();
             #endregion
 
@@ -216,6 +217,7 @@ namespace RandomTaikoSongProgram
                 #region < 리스트 >
                 _ = new List<Dictionary<string, object>>();
                 List<string> titles = new List<string>();
+                List<string> titleddak = new List<string>();
                 List<string> artists = new List<string>();
                 List<string> easyLists = new List<string>();
                 List<string> normalLists = new List<string>();
@@ -230,6 +232,8 @@ namespace RandomTaikoSongProgram
 
                 foreach (string link in links)
                 {
+
+
                     // 미리 선언한 내용을 링크와 결합
                     string url = $"https://taiko.namco-ch.net/taiko/songlist/{link}.php";
 
@@ -253,78 +257,94 @@ namespace RandomTaikoSongProgram
 
                     if (tableNodes != null)
                     {
-                        #region < 곡명, 작곡가명 가져오기 (완성) > 
+                        #region < 노래명, 작곡가명, 장르 가져오기 (완성) > 
                         foreach (HtmlNode songNode in tableNodes)
                         {
                             int count = 0;
-                            HtmlNodeCollection titleCells = songNode.SelectNodes(".//th");
-                            HtmlNodeCollection artistCells = songNode.SelectNodes(".//th//p");
-                            HtmlNodeCollection imgNodes = songNode.SelectNodes("//img");
+
+                            titleddak.Clear(); // titleddak 리스트를 비워서 초기화 ( 장르용 리스트 )
+                            HtmlNodeCollection titleCells = songNode.SelectNodes(".//th"); // 곡명, 작곡가 붙어있는 HTML 태그
+                            HtmlNodeCollection imgnodes = songNode.SelectNodes("//ul//li//a//img[@alt]"); // 장르명, 이미지 붙어있는 HTML 태그
                             if (titleCells != null)
                             {
+                                #region < 작곡가명과 노래 >
                                 foreach (HtmlNode cellNode in titleCells)
                                 {
-                                    var pTag = cellNode.SelectSingleNode(".//p");
+                                    var pTag = cellNode.SelectSingleNode(".//p"); // p태그는 작곡가 이름
 
-                                    if (count >= 8)
+                                    if (count >= 8) // 작곡가명 추가
                                     {
-                                        if(pTag == null)
-                                        { artists.Add(""); }
-                                        else
-                                        { artists.Add(pTag.InnerText); }
+                                        if (pTag != null)
+                                        {
+                                            artists.Add(pTag.InnerText);
+                                        }
                                     }
-                                    pTag?.Remove();
+                                    pTag?.Remove(); // 작곡가명 삭제 (안그러면 제목에 작곡가명까지 같이 들어감)
                                     string title = cellNode.InnerText.Trim();
 
-                                    // 0번째 부터 7번째 요소는 제외하고 추가
-                                    if (count >= 8)
+                                    // 노래 제목 추가 (0번째 부터 7번째 요소는 제외하고 추가)
+                                    if (count >= 8 && !string.IsNullOrEmpty(title))
                                     {
-                                        if (title == "") { }
-                                        else { titles.Add(title);}
+                                        titles.Add(title);
+                                        titleddak.Add(title); // 위에서 리스트 클리어로 삭제하고 다시 다음 리스트를 받아옴
                                     }
                                     count++;
                                 }
-                            }
-                            if (imgNodes != null)
-                            {
-                                int n = 0;
-                                foreach (HtmlNode imgNode in imgNodes)
+                                #endregion
+
+                                switch (link)
                                 {
-                                    string genre = imgNode.GetAttributeValue("alt", "");
-                                    for (int i = 0; i < titles.Count; i++)
-                                    {
-                                        if (n >= 2)
+                                    case "pops":
+                                        for (int i = 0; i < titleddak.Count; i++)
                                         {
-                                            genres.Add(genre);
+                                            genres.Add("ポップス");
                                         }
-                                        if (n >= 10) break;
-                                    }
-                                    n++;
+                                        break;
+                                    case "kids":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("キッズ");
+                                        }
+                                        break;
+                                    case "anime":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("アニメ");
+                                        }
+                                        break;
+                                    case "vocaloid":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("ボーカロイド曲");
+                                        }
+                                        break;
+                                    case "game":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("ゲームミュージック");
+                                        }
+                                        break;
+                                    case "variety":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("バラエティ");
+                                        }
+                                        break;
+                                    case "classic":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("クラシック");
+                                        }
+                                        break;
+                                    case "namco":
+                                        for (int i = 0; i < titleddak.Count; i++)
+                                        {
+                                            genres.Add("ナムコオリジナル");
+                                        }
+                                        break;
                                 }
                             }
                         }
-                        #endregion
-
-                        #region < 장르 가져오기 (완성) > 
-                        // <img> 태그들 선택
-                        //HtmlNodeCollection imgNodes = doc.DocumentNode.SelectNodes("//img");
-                        //if (imgNodes != null)
-                        //{
-                        //    int n = 0;
-                        //    foreach (HtmlNode imgNode in imgNodes)
-                        //    {
-                        //        string genre = imgNode.GetAttributeValue("alt", "");
-                        //        for (int i = 0; i < titles.Count; i++)
-                        //        {
-                        //            if (n >= 2)
-                        //            {
-                        //                genres.Add(genre);
-                        //            }
-                        //            if (n >= 10) break;
-                        //        }
-                        //        n++;
-                        //    }
-                        //}
                         #endregion
 
                         // 난이도 찾기 (쉬움 ~ 우라까지 하나씩 다 집어넣기) <진짜 찐 완성> 클린코딩 필요!!
@@ -546,11 +566,10 @@ namespace RandomTaikoSongProgram
                         }
                         #endregion
                     }
-                    Console.WriteLine(titles.Count);
-                    Console.WriteLine("+++++++++++++++++++++++++");
-                    Console.WriteLine(genres.Count);
-                    Console.WriteLine("=========================");
-                }                
+
+                    
+
+                }
                 GrdResult.ItemsSource = dataList; // 데이터 그리드에 정보를 넣음
             }
         }
