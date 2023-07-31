@@ -28,7 +28,7 @@ namespace RandomTaikoSongProgram
         // 부모에서 데이터를 가져올려면
         public TrailerWindow(string songName) : this()
         {
-            LblSearchName.Content = $"{songName} 예고편";
+            LblSearchName.Content = $"{songName}";
         }
 
         // 화면 로드 완료후에 YoutubeAPI 실행
@@ -59,7 +59,7 @@ namespace RandomTaikoSongProgram
 
             var res = await req.ExecuteAsync(); // 검색결과를 받아옴
 
-            Debug.WriteLine("유튜브검색결과__________________________");
+            Debug.WriteLine("______________유튜브검색결과_____________");
             foreach (var item in res.Items)
             {
                 Debug.WriteLine(item.Snippet.Title);

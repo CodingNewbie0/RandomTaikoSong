@@ -258,6 +258,9 @@
     </ApplicationDefinition>
     <Compile Include="Logics\MyButtonEventHandler.cs" />
     <Compile Include="Logics\TaikoSongCrolling.cs" />
+    <Compile Include="RandomWindow.xaml.cs">
+      <DependentUpon>RandomWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="TrailerWindow.xaml.cs">
       <DependentUpon>TrailerWindow.xaml</DependentUpon>
     </Compile>
@@ -274,6 +277,10 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="RandomWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="TrailerWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>XamlIntelliSenseFileGenerator</Generator>

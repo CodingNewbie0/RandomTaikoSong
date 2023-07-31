@@ -22,6 +22,8 @@ using Org.BouncyCastle.Utilities;
 using System.Windows.Data;
 using System.Linq;
 using System.Security.Policy;
+using System.Diagnostics;
+using System.Windows.Media.Imaging;
 
 namespace RandomTaikoSongProgram
 {
@@ -42,7 +44,6 @@ namespace RandomTaikoSongProgram
             public string Oni { get; set; }
             public string Ura { get; set; }
             public string Genre { get; set; }
-
         }
 
         bool isFavorite = false; // false -> openApi 검색해온결과, true -> 즐겨찾기 보기
@@ -104,76 +105,34 @@ namespace RandomTaikoSongProgram
         }
         #endregion
 
-        // 랜덤 추첨
-        private void BtnRandomSong_Click(object sender, RoutedEventArgs e) 
+        #region < 랜덤 추첨 >
+        private void BtnRandomSong_Click(object sender, RoutedEventArgs e)
         {
-
-        }
-
-        // 검색버튼, OpenAPI 노래 검색 (완료)
-        private async void BtnSearchYouTube_Click(object sender, RoutedEventArgs e)
-        {
-            if (string.IsNullOrEmpty(TxtYouTubeName.Text))
+            if (GrdResult.SelectedItems.Count == 0)
             {
-                await Commons.ShowMessageAsync("검색", "검색할 노래명을 입력하세요.");
+                await Commons.ShowMessageAsync("유튜브", "노래를 선택하세요.");
+                return;
+            }
+            if (GrdResult.SelectedItems.Count > 1)
+            {
+                await Commons.ShowMessageAsync("유튜브", "노래를 하나만 선택하세요.");
                 return;
             }
 
-            try
+            string songName = string.Empty;
+            if (GrdResult.SelectedItem != null)
             {
-                SearchYouTube(TxtYouTubeName.Text);
+                MyData selectedData = (MyData)GrdResult.SelectedItem;
+                songName = selectedData.Title;
             }
-            catch (Exception ex)
-            {
-                await Commons.ShowMessageAsync("오류", $"오류 발생 : {ex.Message}");
-            }
+
+            var trailerWindow = new RandomWindow(songName);
+            trailerWindow.Owner = this; // TrailerWindow의 부모는 MainWindow
+            trailerWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner; // 부모창의 정중앙에 위치
+            trailerWindow.ShowDialog(); // 모달창
         }
+        #endregion
 
-        // 엔터로 검색창 넘어가게 이벤트 넣기
-        private void TxtYouTubeName_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                BtnSearchYouTube_Click(sender, e);
-            }
-        }
-
-        // 실제 검색메서드
-        private async void SearchYouTube(string SongName)
-        {
-            string encoding_songName = HttpUtility.UrlEncode(SongName, Encoding.UTF8); // 노래 검색 URL
-            string result = string.Empty; // 결과값
-
-            // result를 json으로 변경
-            var jsonResult = JObject.Parse(result); // string -> json
-
-            var total = Convert.ToInt32(jsonResult["total_results"]); // 전체 검색결과 수
-                                                                      //await Commons.ShowMessageAsync("검색결과", total.ToString());
-            var items = jsonResult["results"];
-            // items를 데이터그리드에 표시
-            var json_array = items as JArray;
-
-            var songItems = new List<YSI>(); // json에서 넘어온 배열을 담을 장소
-            foreach (var val in json_array)
-            {
-                var songItem = new YSI()
-                {
-                    Title = Convert.ToString(val["title"]),
-                    Composer = Convert.ToString(val["composer"]),
-                    Easy = Convert.ToString(val["easy"]),
-                    Normal = Convert.ToString(val["normal"]),
-                    Hard = Convert.ToString(val["hard"]),
-                    Oni = Convert.ToString(val["oni"]),
-                    Ura = Convert.ToString(val["ura"]),
-                    Genre = Convert.ToString(val["genre"])
-                };
-                songItems.Add(songItem);
-            }
-
-            this.DataContext = songItems;
-            isFavorite = false; // 즐겨찾기가 아님.
-            StsResult.Content = $"노래 조회 {songItems.Count} 건 조회 완료";
-        }
         private void MetroWindow_Loaded(object sender, RoutedEventArgs e)
         {
             string connectionString = "server=210.119.12.53;user=root;database=taiko;password=12345;";
@@ -181,16 +140,19 @@ namespace RandomTaikoSongProgram
             RunCrawling(connectionString);
         }
 
+        #region < 데이터 그리드의 셀을 선택하면 맨위 텍스트박스에 정보가 들어감 >
         private void Title_Click(object sender, SelectionChangedEventArgs e)
         {
-            //if (GridResult.SelectedItem != null)
-            //{
-            //    // 선택한 항목에서 원하는 정보를 가져와서 TxtYouTubeName TextBox에 표시
-            //    MyData selectedData = (MyData)GridResult.SelectedItem;
-            //    TxtYouTubeName.Text = selectedData.Title; // 여기서 Title 대신 다른 정보를 사용하면 됩니다.
-            //}
+            if (GrdResult.SelectedItem != null)
+            {
+                // 선택한 항목에서 원하는 정보를 가져와서 TxtYouTubeName TextBox에 표시
+                MyData selectedData = (MyData)GrdResult.SelectedItem;
+                TxtYouTubeName.Text = selectedData.Title; // Title 정보
+            }
         }
+        #endregion
 
+        #region < 크롤링 시작 >
         public void RunCrawling(string connectionString)
         {
             #region < 크롤링할 링크 목록 >
@@ -208,9 +170,18 @@ namespace RandomTaikoSongProgram
             SongCrawlingAsync();
             #endregion
 
-            GrdResult.Columns[0].Width = new DataGridLength(400);
-            GrdResult.Columns[1].Width = new DataGridLength(450);
-            GrdResult.RowHeight = 15; // 데이터 그리드 높이 값은 원하는 값으로 변경 가능
+            #region < 데이터 그리드 원하는 값으로 변경 >
+            GrdResult.Columns[0].Width = new DataGridLength(390);
+            GrdResult.Columns[1].Width = new DataGridLength(440);
+            GrdResult.Columns[2].Width = new DataGridLength(35);
+            GrdResult.Columns[3].Width = new DataGridLength(35);
+            GrdResult.Columns[4].Width = new DataGridLength(45);
+            GrdResult.Columns[5].Width = new DataGridLength(35);
+            GrdResult.Columns[6].Width = new DataGridLength(35);
+            GrdResult.Columns[7].Width = new DataGridLength(110);
+            GrdResult.RowHeight = 15;
+            #endregion
+
             // 노래 정보를 크롤링
             void SongCrawlingAsync()
             {
@@ -551,7 +522,7 @@ namespace RandomTaikoSongProgram
 
                         #region < DataGrid에 데이터를 추가할 리스트 생성 >
                         if (link == links.Last())
-                        { 
+                        {
                             for (int i = 0; i < titles.Count; i++)
                             {
                                 MyData data = new MyData
@@ -570,15 +541,13 @@ namespace RandomTaikoSongProgram
                         }
                         #endregion
                     }
-
-                    
-
-                }
+                }                
                 GrdResult.ItemsSource = dataList; // 데이터 그리드에 정보를 넣음
             }
         }
+        #endregion
 
-        #region < 찾은거 유튜브로 보기 (완료???) >
+        #region < 찾은거 유튜브로 보기 (완료) >
         private async void BtnWatchTrailer_Click(object sender, RoutedEventArgs e) 
         {
             if (GrdResult.SelectedItems.Count == 0)
@@ -593,22 +562,15 @@ namespace RandomTaikoSongProgram
             }
 
             string songName = string.Empty;
-            if (GrdResult.SelectedItem is YSI)
+            if (GrdResult.SelectedItem != null)
             {
-                var song = GrdResult.SelectedItem as YSI;
-                songName = song.Title;
-            }
-            else if (GrdResult.SelectedItem is YoutubeSongItem)
-            {
-                var song = GrdResult.SelectedItem as YoutubeSongItem;
-                songName = song.Title;
+                MyData selectedData = (MyData)GrdResult.SelectedItem;
+                songName = selectedData.Title; 
             }
 
-            var trailerWindow = new TrailerWindow(songName)
-            {
-                Owner = this, // TrailerWindow의 부모는 MainWindow
-                WindowStartupLocation = WindowStartupLocation.CenterOwner // 부모창의 정중앙에 위치
-            };
+            var trailerWindow = new TrailerWindow(songName);
+            trailerWindow.Owner = this; // TrailerWindow의 부모는 MainWindow
+            trailerWindow.WindowStartupLocation = WindowStartupLocation.CenterOwner; // 부모창의 정중앙에 위치
             trailerWindow.ShowDialog(); // 모달창
 
         }
@@ -639,38 +601,39 @@ namespace RandomTaikoSongProgram
                 {
                     if (conn.State == ConnectionState.Closed) conn.Open();
 
-                    var query = @"INSERT INTO songs (title, composer, easy, genre, release) VALUES (@title, @composer, @easy, @genre, @release);";
+                    var query = @"INSERT INTO songs (Title, Composer, Easy, Normal, Hard, Oni, Ura, Genre, release) 
+                                  VALUES (@Title, @Composer, @Easy, @Normal, @Hard, @Oni, @Ura, @Genre, @release);";
 
 
                     var insRes = 0;                    
                     foreach (YoutubeSongItem item in list)
                     {
                         MySqlCommand cmd = new MySqlCommand(query, conn);
-                        cmd.Parameters.AddWithValue("@title", item.Title);
-                        cmd.Parameters.AddWithValue("@composer", item.Composer);
-                        cmd.Parameters.AddWithValue("@easy", item.Easy);
-                        cmd.Parameters.AddWithValue("@normal", item.Normal);
-                        cmd.Parameters.AddWithValue("@hard", item.Hard);
-                        cmd.Parameters.AddWithValue("@oni", item.Oni);
-                        cmd.Parameters.AddWithValue("@ura", item.Ura);
-                        cmd.Parameters.AddWithValue("@genre", item.Genre);
+                        cmd.Parameters.AddWithValue("@Title", item.Title);
+                        cmd.Parameters.AddWithValue("@Composer", item.Composer);
+                        cmd.Parameters.AddWithValue("@Easy", item.Easy);
+                        cmd.Parameters.AddWithValue("@Normal", item.Normal);
+                        cmd.Parameters.AddWithValue("@Hard", item.Hard);
+                        cmd.Parameters.AddWithValue("@Oni", item.Oni);
+                        cmd.Parameters.AddWithValue("@Ura", item.Ura);
+                        cmd.Parameters.AddWithValue("@Genre", item.Genre);
 
                         insRes += cmd.ExecuteNonQuery();
                     }
                     
                     if (list.Count == insRes)
                     {
-                        await Commons.ShowMessageAsync("저장", "DB저장성공");
+                        await Commons.ShowMessageAsync("저장", "즐겨찾기성공");
                     }
                     else
                     {
-                        await Commons.ShowMessageAsync("저장", "DB저장오류 관리자에게 문의하세요.");
+                        await Commons.ShowMessageAsync("저장", "즐겨찾기오류 관리자에게 문의하세요.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                await Commons.ShowMessageAsync("오류", $"DB저장 오류{ex.Message}");
+                await Commons.ShowMessageAsync("오류", $"즐겨찾기 오류{ex.Message}");
             }            
         }
         #endregion
@@ -698,15 +661,14 @@ namespace RandomTaikoSongProgram
 
                     foreach (YoutubeSongItem item in list)
                     {
-                        cmd.Parameters.AddWithValue("@Id", item.Id);
                         cmd.Parameters.AddWithValue("@Title", item.Title);
                         cmd.Parameters.AddWithValue("@Composer", item.Composer);
-                        cmd.Parameters.AddWithValue("@easy", item.Easy);
-                        cmd.Parameters.AddWithValue("@normal", item.Normal);
-                        cmd.Parameters.AddWithValue("@hard", item.Hard);
-                        cmd.Parameters.AddWithValue("@oni", item.Oni);
-                        cmd.Parameters.AddWithValue("@ura", item.Ura);
-                        cmd.Parameters.AddWithValue("@genre", item.Genre);
+                        cmd.Parameters.AddWithValue("@Easy", item.Easy);
+                        cmd.Parameters.AddWithValue("@Normal", item.Normal);
+                        cmd.Parameters.AddWithValue("@Hard", item.Hard);
+                        cmd.Parameters.AddWithValue("@Oni", item.Oni);
+                        cmd.Parameters.AddWithValue("@Ura", item.Ura);
+                        cmd.Parameters.AddWithValue("@Genre", item.Genre);
                     }
 
                     this.DataContext = list;
@@ -962,6 +924,6 @@ namespace RandomTaikoSongProgram
             }
         }
         #endregion
-                
+
     }
 }
