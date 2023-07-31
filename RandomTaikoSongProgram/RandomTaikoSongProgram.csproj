@@ -261,6 +261,9 @@
     <Compile Include="RandomWindow.xaml.cs">
       <DependentUpon>RandomWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="SequenceTableWindow.xaml.cs">
+      <DependentUpon>SequenceTableWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="TrailerWindow.xaml.cs">
       <DependentUpon>TrailerWindow.xaml</DependentUpon>
     </Compile>
@@ -278,6 +281,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="RandomWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SequenceTableWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
